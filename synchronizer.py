@@ -112,7 +112,7 @@ def run_in_wait_for_mode ():
     global g_return_code
 
     with g_exit_condition_semaphore:
-        server_address_and_port = ('localhost',g_options.wait_on_port)
+        server_address_and_port = (g_options.wait_on_address,g_options.wait_on_port)
         server_url = '{0}:{1}'.format(*server_address_and_port)
         log_verbose_message('Running in `wait-for` mode on {0}.', server_url)
         debug_spew('Running in `wait-for` mode on {0}.', server_url)
