@@ -66,7 +66,7 @@ class Options:
     @staticmethod
     def help_message (program_name):
         return (
-            'Usage: python {0} [options]\n'
+            'Usage: {0} [options]\n'
             '\n'
             '    Utility to perform simple `wait for X to happen` style synchronization via commandline.  Operates either\n'
             '    in `tell` mode or `wait-for` mode.  The `tell` mode consists of attempting to HTTP POST a particular token\n'
