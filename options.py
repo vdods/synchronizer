@@ -26,6 +26,7 @@ class Options:
                 'wait-on-port=',
                 'verbose=',
                 'debug-spew=',
+                'output-stream=',
             ]
         )
 
@@ -37,6 +38,7 @@ class Options:
         self.wait_on_port = 45954
         self.verbose = False
         self.debug_spew_enabled = False
+        self.output_stream = sys.stdout
 
         for opt in opt_v:
             if opt[0] == '--help':
@@ -56,8 +58,13 @@ class Options:
                 self.verbose = opt[1].lower() in ['true', 'yes', 'on', '1']
             elif opt[0] == '--debug-spew':
                 self.debug_spew_enabled = opt[1].lower() in ['true', 'yes', 'on', '1']
+            elif opt[0] == '--output-stream':
+                if opt[1].lower() not in ['stdout', 'stderr']:
+                    sys.stderr.write('Argument to --output-stream must be one of stdout or stderr (case insensitive).\n')
+                    sys.exit(2)
+                self.output_stream = sys.stdout if opt[1].lower() == 'stdout' else sys.stderr
             else:
-                sys.stderr.write('Invalid option: {0}'.format(opt))
+                sys.stderr.write('Invalid option: {0}\n'.format(opt))
                 sys.exit(2)
 
         self.in_tell_mode = len(self.tell_v) > 0
@@ -92,6 +99,8 @@ class Options:
             '       --verbose=<arg> : Enables verbose mode, which will cause certain operational messages to be printed.\n'
             '                         An <arg> value of true, yes, on, or 1 (case insensitive) will enable this, while\n'
             '                         anything else disables it.\n'
-            '    --debug-spew=<arg> : Enables messages used for debugging.  The <arg> value is parsed as in --verbose.\n'.format(program_name)
+            '    --debug-spew=<arg> : Enables messages used for debugging.  The <arg> value is parsed as in --verbose.\n'
+            ' --output-stream=<arg> : An <arg> value of stdout or stderr specifies which file stream all debug-spew and\n'
+            '                         verbose messaging should be sent to.\n'.format(program_name)
         )
 

@@ -15,16 +15,16 @@ g_return_code = locked_object.LockedObject(None)
 
 def log_verbose_message (message, *args):
     if g_options.verbose:
-        sys.stdout.write(message.format(*args))
-        sys.stdout.write('\n')
+        g_options.output_stream.write(message.format(*args))
+        g_options.output_stream.write('\n')
 
 def debug_spew (message, *args):
     global g_options
     if g_options.debug_spew_enabled:
-        sys.stdout.write(threading.current_thread().name)
-        sys.stdout.write(': ')
-        sys.stdout.write(message.format(*args))
-        sys.stdout.write('\n')
+        g_options.output_stream.write(threading.current_thread().name)
+        g_options.output_stream.write(': ')
+        g_options.output_stream.write(message.format(*args))
+        g_options.output_stream.write('\n')
 
 def run_in_tell_mode ():
     global g_options
