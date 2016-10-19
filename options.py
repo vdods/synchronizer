@@ -1,8 +1,13 @@
 import getopt
+import sys
 
 class TellSpec:
     def __init__ (self, tell_spec_string):
-        self.url,self.token = tell_spec_string.split('/', 2)
+        try:
+            self.url,self.token = tell_spec_string.split('/', 2)
+        except ValueError as e:
+            sys.stderr.write('Invalid `tell` option; expected the form address:port/token\n')
+            sys.exit(2)
 
     def tell (self):
         pass
@@ -51,6 +56,9 @@ class Options:
                 self.verbose = opt[1].lower() in ['true', 'yes', 'on', '1']
             elif opt[0] == '--debug-spew':
                 self.debug_spew_enabled = opt[1].lower() in ['true', 'yes', 'on', '1']
+            else:
+                sys.stderr.write('Invalid option: {0}'.format(opt))
+                sys.exit(2)
 
         self.in_tell_mode = len(self.tell_v) > 0
         self.in_wait_for_mode = len(self.wait_for_v) > 0
@@ -70,15 +78,15 @@ class Options:
             '          --help       : Print this help message and then exits with return code 0.\n'
             '          --tell=<arg> : If <arg> has the form address:port/token, then periodically attempts to HTTP POST\n'
             '                         token to address:port.  Stops upon success.  Program exits with return code 0 if\n'
-            '                         every `tell` succeeded, otherwise exits with return code -1 if the timeout condition\n'
+            '                         every `tell` succeeded, otherwise exits with return code 1 if the timeout condition\n'
             '                         was reached.\n'
             '   --tell-period=<arg> : The number of seconds between attempts to `tell`.  Can be decimal-valued.  Default\n'
             '                         is 1.0.\n'
-            '       --timeout=<arg> : The number of seconds before the program exits with return code -1 if it hasn\'t\n'
+            '       --timeout=<arg> : The number of seconds before the program exits with return code 1 if it hasn\'t\n'
             '                         succeded.  Can be decimal-valued.  Default is inf (i.e. no timeout).\n'
             '      --wait-for=<arg> : Waits for the token <arg> to be HTTP POST\'ed on given port.  Multiple such waits\n'
             '                         can be made, even with duplicate token values.  Program exits with return code 0\n'
-            '                         if each wait request was successfully received, otherwise exits with return code -1\n'
+            '                         if each wait request was successfully received, otherwise exits with return code 1\n'
             '                         if the timeout condition was reached.\n'
             '  --wait-on-port=<arg> : Defines the port on which `wait` requests will be received.\n'
             '       --verbose=<arg> : Enables verbose mode, which will cause certain operational messages to be printed.\n'

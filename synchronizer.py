@@ -40,16 +40,18 @@ def run_in_tell_mode ():
                 for tell_index,tell in enumerate(g_options.tell_v):
                     post_url = 'http://{0}'.format(tell.url)
                     post_data = tell.token
-                    debug_spew('HTTP POST to {0} with data {1}', post_url, post_data)
+                    debug_spew('HTTP POST to {0} with data "{1}"', post_url, post_data)
                     try:
                         response = requests.post(post_url, data=post_data)
                         debug_spew('HTTP POST response status is {0}, text follows: {1}', response.status_code, response.text)
                         expected_response_text = 'INTERCOURSE the {0}!'.format(tell.token)
                         # If the HTTP POST was successful, cross off this tell element as completed.
                         if response.status_code == 200 and response.text == expected_response_text:
-                            log_verbose_message('Successfully sent token {0} to {1}; {2} tokens left.', tell.token, post_url, len(g_options.tell_v)-1)
-                            debug_spew('Successfully sent token {0} to {1} (out of {2} tell tokens).', tell.token, post_url, len(g_options.tell_v))
                             g_options.tell_v[tell_index] = None
+                            tokens_left_count = sum(int(tell is not None) for tell in g_options.tell_v)
+                            log_verbose_message('Successfully sent token "{0}" to {1}; {2} tokens left.', tell.token, post_url, tokens_left_count)
+                            debug_spew('Successfully sent token {0} to "{1}" ({2} tokens left).', tell.token, post_url, tokens_left_count)
+                            debug_spew('g_options.tell_v = {0}', [tell.token if tell is not None else None for tell in g_options.tell_v])
                     except requests.exceptions.ConnectionError as e:
                         # This is fine, the `wait-for` service just isn't up yet.
                         debug_spew('The wait-for service at {0} is not up yet.', post_url)
@@ -68,7 +70,7 @@ def run_in_tell_mode ():
             with g_return_code as rc:
                 log_verbose_message('Error encountered: {0}', e)
                 debug_spew('Error encountered in `tell` mode; shutting down; error was {0}', e)
-                rc.value = -1
+                rc.value = 1
 
         debug_spew('About to release exit condition semaphore.')
 
@@ -83,8 +85,11 @@ class WaitFor (BaseHTTPServer.BaseHTTPRequestHandler):
 
         try:
             index = g_options.wait_for_v.index(post_body)
-            log_verbose_message('Received expected token {0}; {1} tokens left.'.format(post_body, len(g_options.wait_for_v)-1))
-            debug_spew('Token {0} successfully matched (out of {1} wait-for tokens).'.format(post_body, len(g_options.wait_for_v)))
+            g_options.wait_for_v[index] = None
+            g_options.wait_for_v = filter(lambda wait_for:wait_for is not None, g_options.wait_for_v)
+
+            log_verbose_message('Received expected token "{0}"; {1} tokens left.'.format(post_body, len(g_options.wait_for_v)))
+            debug_spew('Token "{0}" successfully matched ({1} tokens left).'.format(post_body, len(g_options.wait_for_v)))
 
             self.send_response(200) # OK (see https://en.wikipedia.org/wiki/List_of_HTTP_status_codes)
             self.send_header("Content-type", "text/plain")
@@ -92,12 +97,9 @@ class WaitFor (BaseHTTPServer.BaseHTTPRequestHandler):
             self.wfile.write('INTERCOURSE the ')
             self.wfile.write(post_body)
             self.wfile.write('!')
-
-            g_options.wait_for_v[index] = None
-            g_options.wait_for_v = filter(lambda wait_for:wait_for is not None, g_options.wait_for_v)
         except ValueError:
-            log_verbose_message('Received unexpected token {0} from {1}', post_body, client_url)
-            debug_spew('Token {0} from {1} did not match any wait-for token', post_body, client_url)
+            log_verbose_message('Received unexpected token "{0}" from {1}', post_body, client_url)
+            debug_spew('Token "{0}" from {1} did not match any wait-for token', post_body, client_url)
             self.send_response(400) # Bad Request (see https://en.wikipedia.org/wiki/List_of_HTTP_status_codes)
 
     def log_message(self, format, *args):
@@ -115,8 +117,9 @@ def run_in_wait_for_mode ():
         log_verbose_message('Running in `wait-for` mode on {0}.', server_url)
         debug_spew('Running in `wait-for` mode on {0}.', server_url)
 
-        httpd = BaseHTTPServer.HTTPServer(server_address_and_port, WaitFor)
+        httpd = None
         try:
+            httpd = BaseHTTPServer.HTTPServer(server_address_and_port, WaitFor)
             while len(g_options.wait_for_v) > 0:
                 httpd.handle_request()
             with g_return_code as rc:
@@ -127,9 +130,10 @@ def run_in_wait_for_mode ():
             with g_return_code as rc:
                 log_verbose_message('Error encountered: {0}', e)
                 debug_spew('Error encountered in `wait-for` mode; shutting down; error was {0}', e)
-                rc.value = -1
+                rc.value = 1
         finally:
-            httpd.server_close()
+            if httpd is not None:
+                httpd.server_close()
 
         debug_spew('About to release exit condition semaphore.')
 
@@ -145,7 +149,7 @@ def run_timeout_waiter ():
         with g_return_code as rc:
             log_verbose_message('Timeout occurred (timeout was {0} seconds).', g_options.timeout)
             debug_spew('Timeout occurred (timeout was {0} seconds).', g_options.timeout)
-            rc.value = -1
+            rc.value = 1
 
         debug_spew('About to release exit condition semaphore.')
 
@@ -176,9 +180,9 @@ def run_main_thread ():
                 # Hacky way to keep the main thread available to listen for KeyboardInterrupt
                 time.sleep(1.0)
     except KeyboardInterrupt:
-        log_verbose_message('Caught KeyboardInterrupt; program terminating with return code {0}', -1)
-        debug_spew('Caught KeyboardInterrupt; program terminating with return code {0}', -1)
-        sys.exit(-1)
+        log_verbose_message('Caught KeyboardInterrupt; program terminating with return code {0}', 1)
+        debug_spew('Caught KeyboardInterrupt; program terminating with return code {0}', 1)
+        sys.exit(1)
 
 if __name__ == '__main__':
     g_options = options.Options(sys.argv[1:])
@@ -194,7 +198,7 @@ if __name__ == '__main__':
 
     if g_options.in_tell_mode and g_options.in_wait_for_mode:
         sys.stderr.write('Must operate exclusively in `tell` mode or `wait-for` mode, not both.')
-        sys.exit(-1)
+        sys.exit(1)
 
     # Here on down is where the thread-based services start.
 
