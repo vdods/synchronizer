@@ -81,7 +81,7 @@ class WaitFor (BaseHTTPServer.BaseHTTPRequestHandler):
         content_length = int(self.headers.getheader('content-length', 0))
         post_body = self.rfile.read(content_length)
         client_url = '{0}:{1}'.format(self.client_address[0], self.client_address[1])
-        debug_spew('Received request body {0} from ', post_body, client_url)
+        debug_spew('Received request body "{0}" from ', post_body, client_url)
 
         try:
             index = g_options.wait_for_v.index(post_body)
